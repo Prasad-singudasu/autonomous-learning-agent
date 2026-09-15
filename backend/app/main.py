@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 import logging
 import os
 
+from app.config import settings
 from app.database.db import create_tables
 from app.api import (
     auth_router, learning_router, roadmap_router,
