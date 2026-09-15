@@ -13,7 +13,7 @@ class GroqProvider(BaseLLMProvider):
         self.model = settings.GROQ_MODEL
         logger.info("[LLM] Groq provider ready with model: %s", self.model)
 
-    async def generate(self, prompt: str, system_prompt: Optional[str] = None, temperature: float = 0.7) -> str:
+    async def generate(self, prompt: str, system_prompt: Optional[str] = None, temperature: float = 0.7, max_tokens: Optional[int] = None) -> str:
         logger.info("[LLM] Using Groq model: %s", self.model)
         messages = []
         if system_prompt:
@@ -25,7 +25,7 @@ class GroqProvider(BaseLLMProvider):
                 model=self.model,
                 messages=messages,
                 temperature=temperature,
-                max_tokens=4096,
+                max_tokens=max_tokens or 4096,
             )
             result = response.choices[0].message.content
             if not result:

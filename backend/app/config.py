@@ -9,19 +9,23 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
 
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_MODEL: str = "gemini-2.5-flash-preview-05-20"
     GROQ_API_KEY: str = ""
-    GROQ_MODEL: str = "qwen/qwen3.8-27b"
+    GROQ_MODEL: str = "qwen/qwen3-8b"
     TAVILY_API_KEY: str = ""
 
     LANGCHAIN_TRACING_V2: bool = False
     LANGCHAIN_API_KEY: str = ""
     LANGCHAIN_PROJECT: str = "autonomous-learning-agent"
 
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+
     REDIS_URL: str = "redis://localhost:6379"
     APP_ENV: str = "development"
     UPLOAD_DIR: str = "uploads/documents"
     MAX_UPLOAD_SIZE_MB: int = 50
+    FRONTEND_URL: str = ""
 
     class Config:
         env_file = ".env"

@@ -13,18 +13,22 @@ class GeminiProvider(BaseLLMProvider):
         self.client = genai.Client(api_key=settings.GEMINI_API_KEY)
         self.model = settings.GEMINI_MODEL
 
-    async def generate(self, prompt: str, system_prompt: Optional[str] = None, temperature: float = 0.7) -> str:
+    async def generate(self, prompt: str, system_prompt: Optional[str] = None, temperature: float = 0.7, max_tokens: Optional[int] = None) -> str:
         full_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
         logger.info("[LLM] Using Gemini model: %s", self.model)
         try:
-            response = self.client.models.generate_content(
-                model=self.model,
-                contents=full_prompt,
-                config=types.GenerateContentConfig(
-                    temperature=temperature,
-                    max_output_tokens=8192,
-                    response_mime_type="application/json",
-                ),
+            import asyncio
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(
+                None,
+                lambda: self.client.models.generate_content(
+                    model=self.model,
+                    contents=full_prompt,
+                    config=types.GenerateContentConfig(
+                        temperature=temperature,
+                        max_output_tokens=max_tokens or 8192,
+                    ),
+                )
             )
             return response.text
         except Exception as e:

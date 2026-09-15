@@ -29,11 +29,11 @@ class LLMService:
         except Exception as e:
             logger.warning("[LLM] Groq init failed: %s", str(e)[:80])
 
-    async def generate(self, prompt: str, system_prompt: Optional[str] = None, temperature: float = 0.7) -> str:
+    async def generate(self, prompt: str, system_prompt: Optional[str] = None, temperature: float = 0.7, max_tokens: Optional[int] = None) -> str:
         # Try primary (Gemini)
         if self._primary:
             try:
-                return await self._with_retry(self._primary, prompt, system_prompt, temperature)
+                return await self._with_retry(self._primary, prompt, system_prompt, temperature, max_tokens)
             except QuotaExceededError:
                 logger.warning("[LLM] Gemini quota exceeded — switching to Groq fallback")
             except FatalProviderError as e:
@@ -46,7 +46,7 @@ class LLMService:
         if self._fallback:
             try:
                 logger.info("[LLM] Switching to Groq fallback")
-                return await self._with_retry(self._fallback, prompt, system_prompt, temperature)
+                return await self._with_retry(self._fallback, prompt, system_prompt, temperature, max_tokens)
             except Exception as e:
                 logger.error("[LLM] Groq fallback also failed: %s", str(e)[:80])
                 raise RuntimeError(f"All LLM providers failed. Last error: {e}")
@@ -65,14 +65,14 @@ class LLMService:
         prompt: str,
         system_prompt: Optional[str],
         temperature: float,
+        max_tokens: Optional[int] = None,
     ) -> str:
-        # Do not retry quota or fatal errors
         try:
-            return await provider.generate(prompt, system_prompt, temperature)
+            return await provider.generate(prompt, system_prompt, temperature, max_tokens)
         except (QuotaExceededError, FatalProviderError):
-            raise  # bubble up immediately, tenacity won't catch these
+            raise
         except Exception:
-            raise  # tenacity will retry
+            raise
 
 
 _llm_service: Optional[LLMService] = None

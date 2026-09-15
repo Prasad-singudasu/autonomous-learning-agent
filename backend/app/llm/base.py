@@ -14,7 +14,7 @@ class FatalProviderError(Exception):
 
 class BaseLLMProvider(ABC):
     @abstractmethod
-    async def generate(self, prompt: str, system_prompt: Optional[str] = None, temperature: float = 0.7) -> str:
+    async def generate(self, prompt: str, system_prompt: Optional[str] = None, temperature: float = 0.7, max_tokens: Optional[int] = None) -> str:
         pass
 
     @abstractmethod
