@@ -42,7 +42,8 @@ ALLOWED_ORIGINS = [
 ]
 
 if settings.FRONTEND_URL:
-    ALLOWED_ORIGINS.append(settings.FRONTEND_URL)
+    # Strip trailing slash to avoid origin mismatch (browsers never send trailing slash)
+    ALLOWED_ORIGINS.append(settings.FRONTEND_URL.rstrip("/"))
 
 app.add_middleware(
     CORSMiddleware,

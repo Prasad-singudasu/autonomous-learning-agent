@@ -23,7 +23,16 @@ export default function Register() {
       toast.success('Account created! Welcome aboard!')
       navigate('/dashboard')
     } catch (err) {
-      setError(err.response?.data?.detail || 'Registration failed')
+      const detail = err.response?.data?.detail
+      const status = err.response?.status
+      if (detail) {
+        setError(typeof detail === 'string' ? detail : JSON.stringify(detail))
+      } else if (err.request) {
+        setError(`Cannot reach server — check your connection or try again. (${err.message})`)
+      } else {
+        setError(err.message || 'Registration failed')
+      }
+      if (status) setError(prev => `${prev} [${status}]`)
     } finally { setLoading(false) }
   }
 
