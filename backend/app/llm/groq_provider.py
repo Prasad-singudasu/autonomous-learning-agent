@@ -25,7 +25,7 @@ class GroqProvider(BaseLLMProvider):
                 model=self.model,
                 messages=messages,
                 temperature=temperature,
-                max_tokens=max_tokens or 4096,
+                max_tokens=max_tokens or 900,
             )
             result = response.choices[0].message.content
             if not result:

@@ -12,7 +12,8 @@ All string values must be plain text. Code goes only in examples[].code fields."
 QUIZ_SYSTEM_PROMPT = """You are a quiz generator. Output ONLY a raw JSON object.
 No markdown fences. No <think> blocks. No reasoning text. No explanation before or after.
 First character must be { and last character must be }.
-Generate exactly 6 multiple choice questions. correct_answer is a single letter: A, B, C, or D."""
+Generate exactly 5 multiple choice questions. correct_answer is a single letter: A, B, C, or D.
+Keep every question under 12 words. Keep every option under 5 words. Be concise."""
 
 EVALUATION_SYSTEM_PROMPT = """You are an expert evaluator. Output ONLY a raw JSON object.
 No markdown fences. No <think> blocks. No reasoning text. No explanation before or after.

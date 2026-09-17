@@ -172,17 +172,17 @@ async def generate_quiz_node(state: LearningState) -> Dict[str, Any]:
     weak_concepts = state.get("weak_concepts", [])
     is_retest = state.get("attempts", 0) > 0
 
-    prompt = f"""Generate a quiz. Topic: {topic}. Checkpoint: {checkpoint.get('title', '')}.
-{f'Focus on weak areas: {chr(44).join(weak_concepts)}.' if weak_concepts else ''}
-{'NEW questions only (retest).' if is_retest else ''}
+    prompt = f"""Quiz: {topic} — {checkpoint.get('title', '')}.
+{('Weak areas: ' + ', '.join(weak_concepts) + '.') if weak_concepts else ''}
+{'New questions (retest).' if is_retest else ''}
 
-Return ONLY valid JSON, no explanation field:
-{{"questions":[{{"id":"q1","type":"multiple_choice","question":"?","options":["A) ","B) ","C) ","D) "],"correct_answer":"A","concept":""}}]}}
+Return ONLY this JSON, 5 questions, no extra fields:
+{{"questions":[{{"id":"q1","type":"multiple_choice","question":"Short question?","options":["A) opt","B) opt","C) opt","D) opt"],"correct_answer":"A","concept":"term"}}]}}
 
-Generate exactly 6 questions. No explanation field. Keep options short (under 8 words each)."""
+Rules: 5 questions. Options max 5 words each. Questions max 12 words. correct_answer is A/B/C/D only."""
 
     try:
-        response = await llm.generate(prompt, QUIZ_SYSTEM_PROMPT)
+        response = await llm.generate(prompt, QUIZ_SYSTEM_PROMPT, max_tokens=800)
         quiz_data = safe_parse_json(response)
         log_entry = {"action": f"Generated {'retest' if is_retest else 'quiz'} for: {checkpoint.get('title', '')}", "questions": len(quiz_data.get("questions", []))}
         return {

@@ -11,7 +11,11 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-2.5-flash-preview-05-20"
     GROQ_API_KEY: str = ""
-    GROQ_MODEL: str = "qwen/qwen3-8b"
+    GROQ_MODEL: str = "qwen/qwen3.8-27b"
+    MISTRAL_API_KEY: str = ""
+    MISTRAL_MODEL: str = "mistral-small-latest"
+    OPENROUTER_API_KEY: str = ""
+    OPENROUTER_MODEL: str = "google/gemma-4-31b-it:free"
     TAVILY_API_KEY: str = ""
 
     LANGCHAIN_TRACING_V2: bool = False

@@ -1,64 +1,72 @@
-import asyncio
 import logging
-from typing import Optional
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from typing import Optional, List
 
 from app.llm.base import BaseLLMProvider, QuotaExceededError, FatalProviderError
 from app.llm.gemini_provider import GeminiProvider
 from app.llm.groq_provider import GroqProvider
+from app.llm.mistral_provider import MistralProvider
+from app.llm.openrouter_provider import OpenRouterProvider
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
 
 class LLMService:
     def __init__(self):
-        self._primary: Optional[BaseLLMProvider] = None
-        self._fallback: Optional[BaseLLMProvider] = None
+        self._providers: List[BaseLLMProvider] = []
         self._initialize_providers()
 
     def _initialize_providers(self):
-        try:
-            self._primary = GeminiProvider()
-            logger.info("[LLM] Gemini provider initialized as primary")
-        except Exception as e:
-            logger.warning("[LLM] Gemini init failed: %s", str(e)[:80])
-
-        try:
-            self._fallback = GroqProvider()
-            logger.info("[LLM] Groq provider initialized as fallback")
-        except Exception as e:
-            logger.warning("[LLM] Groq init failed: %s", str(e)[:80])
-
-    async def generate(self, prompt: str, system_prompt: Optional[str] = None, temperature: float = 0.7, max_tokens: Optional[int] = None) -> str:
-        # Try primary (Gemini)
-        if self._primary:
+        candidates = [
+            ("Gemini",      GeminiProvider,      bool(settings.GEMINI_API_KEY)),
+            ("Groq",        GroqProvider,         bool(settings.GROQ_API_KEY)),
+            ("Mistral",     MistralProvider,      bool(settings.MISTRAL_API_KEY)),
+            ("OpenRouter",  OpenRouterProvider,   bool(settings.OPENROUTER_API_KEY)),
+        ]
+        for name, cls, has_key in candidates:
+            if not has_key:
+                logger.info("[LLM] %s skipped — API key not configured", name)
+                continue
             try:
-                return await self._with_retry(self._primary, prompt, system_prompt, temperature, max_tokens)
-            except QuotaExceededError:
-                logger.warning("[LLM] Gemini quota exceeded — switching to Groq fallback")
+                self._providers.append(cls())
+                logger.info("[LLM] %s provider initialized", name)
+            except Exception as e:
+                logger.warning("[LLM] %s init failed: %s", name, str(e)[:80])
+
+        if not self._providers:
+            logger.error("[LLM] No providers initialized — all API keys missing or init failed")
+
+    async def generate(
+        self,
+        prompt: str,
+        system_prompt: Optional[str] = None,
+        temperature: float = 0.7,
+        max_tokens: Optional[int] = None,
+    ) -> str:
+        if not self._providers:
+            raise RuntimeError("[LLM] No providers available")
+
+        last_error: Optional[Exception] = None
+
+        for provider in self._providers:
+            name = provider.get_provider_name().capitalize()
+            logger.info("[LLM] Trying %s", name)
+            try:
+                result = await self._with_retry(provider, prompt, system_prompt, temperature, max_tokens)
+                logger.info("[LLM] %s succeeded", name)
+                return result
+            except QuotaExceededError as e:
+                logger.warning("[LLM] %s quota/rate-limit — trying next provider", name)
+                last_error = e
             except FatalProviderError as e:
-                logger.error("[LLM] Gemini fatal error: %s", str(e)[:80])
-                logger.warning("[LLM] Switching to Groq fallback")
+                logger.error("[LLM] %s fatal error: %s — trying next provider", name, str(e)[:80])
+                last_error = e
             except Exception as e:
-                logger.warning("[LLM] Gemini failed after retries: %s — switching to Groq", str(e)[:80])
+                logger.warning("[LLM] %s failed: %s — trying next provider", name, str(e)[:80])
+                last_error = e
 
-        # Fallback (Groq)
-        if self._fallback:
-            try:
-                logger.info("[LLM] Switching to Groq fallback")
-                return await self._with_retry(self._fallback, prompt, system_prompt, temperature, max_tokens)
-            except Exception as e:
-                logger.error("[LLM] Groq fallback also failed: %s", str(e)[:80])
-                raise RuntimeError(f"All LLM providers failed. Last error: {e}")
+        raise RuntimeError(f"All LLM providers failed. Last error: {last_error}")
 
-        raise RuntimeError("[LLM] No providers available")
-
-    @retry(
-        stop=stop_after_attempt(2),
-        wait=wait_exponential(multiplier=1, min=2, max=6),
-        retry=retry_if_exception_type(Exception),
-        reraise=True,
-    )
     async def _with_retry(
         self,
         provider: BaseLLMProvider,
@@ -67,12 +75,20 @@ class LLMService:
         temperature: float,
         max_tokens: Optional[int] = None,
     ) -> str:
-        try:
-            return await provider.generate(prompt, system_prompt, temperature, max_tokens)
-        except (QuotaExceededError, FatalProviderError):
-            raise
-        except Exception:
-            raise
+        # Two attempts with a short pause for transient errors.
+        # QuotaExceededError and FatalProviderError skip retry immediately.
+        import asyncio
+        last_exc: Optional[Exception] = None
+        for attempt in range(2):
+            try:
+                return await provider.generate(prompt, system_prompt, temperature, max_tokens)
+            except (QuotaExceededError, FatalProviderError):
+                raise
+            except Exception as e:
+                last_exc = e
+                if attempt == 0:
+                    await asyncio.sleep(2)
+        raise last_exc  # type: ignore[misc]
 
 
 _llm_service: Optional[LLMService] = None
