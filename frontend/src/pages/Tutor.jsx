@@ -109,7 +109,7 @@ export default function Tutor() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3">
+      <div className="px-3 sm:px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center gap-3">
         <div className="w-9 h-9 bg-gradient-to-br from-violet-600 to-violet-800 rounded-xl flex items-center justify-center shrink-0 shadow-sm">
           <Bot className="w-5 h-5 text-white" />
         </div>
@@ -131,7 +131,7 @@ export default function Tutor() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 bg-slate-50 dark:bg-gray-950">
+      <div className="flex-1 overflow-y-auto px-3 sm:px-5 py-4 space-y-4 bg-slate-50 dark:bg-gray-950">
         {messages.map((msg, i) => (
           <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
             <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${msg.role === 'user' ? 'bg-violet-600' : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700'}`}>
@@ -139,7 +139,7 @@ export default function Tutor() {
                 ? <User className="w-3.5 h-3.5 text-white" />
                 : <Bot className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />}
             </div>
-            <div className={`max-w-[82%] rounded-2xl px-4 py-3 text-sm ${
+            <div className={`max-w-[85%] rounded-2xl px-3 sm:px-4 py-3 text-sm ${
               msg.role === 'user'
                 ? 'bg-violet-600 text-white rounded-tr-sm shadow-sm'
                 : 'bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-tl-sm shadow-sm'
@@ -176,10 +176,10 @@ export default function Tutor() {
       </div>
 
       {messages.length === 1 && (
-        <div className="px-5 pb-3">
+        <div className="px-3 sm:px-5 pb-3">
           <div className="flex flex-wrap gap-2">
             {suggestions.map(s => (
-              <button key={s} onClick={() => setInput(s)} className="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-violet-400 hover:text-violet-600 dark:hover:text-violet-400 px-3 py-1.5 rounded-lg transition-all">
+              <button key={s} onClick={() => setInput(s)} className="text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-violet-400 hover:text-violet-600 dark:hover:text-violet-400 px-3 py-1.5 rounded-lg transition-all w-full sm:w-auto text-left">
                 {s}
               </button>
             ))}
@@ -187,12 +187,12 @@ export default function Tutor() {
         </div>
       )}
 
-      <div className="px-5 py-4 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
+      <div className="px-3 sm:px-5 py-3 sm:py-4 border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
         <div className="flex gap-2 items-end">
           <textarea
             ref={textareaRef}
             rows={1}
-            className="input flex-1 resize-none overflow-hidden leading-relaxed text-sm"
+            className="input flex-1 min-w-0 resize-none overflow-hidden leading-relaxed text-sm"
             placeholder="Ask anything..."
             value={input}
             onChange={handleInput}
@@ -203,7 +203,7 @@ export default function Tutor() {
           <button
             onClick={sendMessage}
             disabled={loading || !input.trim()}
-            className="btn-primary px-4 py-2.5 flex items-center gap-1.5 shrink-0 text-sm"
+            className="btn-primary px-3 sm:px-4 py-2.5 flex items-center gap-1.5 shrink-0 text-sm"
           >
             <Send className="w-4 h-4" />
           </button>

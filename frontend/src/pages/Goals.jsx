@@ -20,7 +20,7 @@ export default function Goals() {
   if (loading) return <LoadingScreen />
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <PageHeader
         title="Learning Goals"
         subtitle="All your learning journeys"

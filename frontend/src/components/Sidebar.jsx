@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import {
   Brain, LayoutDashboard, Target, BarChart3,
-  History, Upload, Library, Settings, LogOut, MessageSquare, Sun, Moon
+  History, Upload, Library, Settings, LogOut, MessageSquare, Sun, Moon, X
 } from 'lucide-react'
 
 const navItems = [
@@ -17,17 +17,18 @@ const navItems = [
   { to: '/settings', icon: Settings, label: 'Settings' },
 ]
 
-export default function Sidebar() {
+export default function Sidebar({ mobileOpen, setMobileOpen }) {
   const { user, logout } = useAuth()
   const { dark, toggle } = useTheme()
   const navigate = useNavigate()
 
   const handleLogout = () => { logout(); navigate('/') }
+  const closeMobile = () => setMobileOpen(false)
 
-  return (
+  const sidebarContent = (
     <aside className="w-60 bg-white dark:bg-gray-900 border-r border-gray-100 dark:border-gray-800 flex flex-col h-full shrink-0">
       {/* Logo */}
-      <div className="px-5 py-5 border-b border-gray-100 dark:border-gray-800">
+      <div className="px-5 py-5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-gradient-to-br from-violet-600 to-violet-800 rounded-xl flex items-center justify-center shadow-sm">
             <Brain className="w-5 h-5 text-white" />
@@ -37,6 +38,14 @@ export default function Sidebar() {
             <p className="text-violet-500 text-[11px] font-medium">AI-Powered</p>
           </div>
         </div>
+        {/* Close button — mobile only */}
+        <button
+          onClick={closeMobile}
+          className="md:hidden p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          aria-label="Close menu"
+        >
+          <X className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Nav */}
@@ -45,6 +54,7 @@ export default function Sidebar() {
           <NavLink
             key={to}
             to={to}
+            onClick={closeMobile}
             className={({ isActive }) =>
               `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 ${
                 isActive
@@ -65,7 +75,6 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div className="px-3 py-4 border-t border-gray-100 dark:border-gray-800 space-y-1">
-        {/* User */}
         <div className="flex items-center gap-2.5 px-3 py-2 mb-1">
           <div className="w-7 h-7 bg-gradient-to-br from-violet-500 to-violet-700 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0">
             {user?.username?.[0]?.toUpperCase()}
@@ -86,5 +95,30 @@ export default function Sidebar() {
         </button>
       </div>
     </aside>
+  )
+
+  return (
+    <>
+      {/* Desktop sidebar — always visible md+ */}
+      <div className="hidden md:flex h-full">
+        {sidebarContent}
+      </div>
+
+      {/* Mobile drawer overlay */}
+      {mobileOpen && (
+        <div className="md:hidden fixed inset-0 z-40 flex">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/40"
+            onClick={closeMobile}
+            aria-hidden="true"
+          />
+          {/* Drawer */}
+          <div className="relative z-50 flex h-full">
+            {sidebarContent}
+          </div>
+        </div>
+      )}
+    </>
   )
 }
