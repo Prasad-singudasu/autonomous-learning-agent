@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 from groq import AsyncGroq
-from app.llm.base import BaseLLMProvider, FatalProviderError
+from app.llm.base import BaseLLMProvider, FatalProviderError, TruncatedResponseError
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -25,11 +25,15 @@ class GroqProvider(BaseLLMProvider):
                 model=self.model,
                 messages=messages,
                 temperature=temperature,
-                max_tokens=max_tokens or 900,
+                max_tokens=max_tokens or 1200,
             )
             result = response.choices[0].message.content
             if not result:
                 raise ValueError("Groq returned empty content")
+            # Detect truncation
+            if response.choices[0].finish_reason == "length":
+                logger.warning("[LLM] Groq response truncated (finish_reason=length), len=%d", len(result))
+                raise TruncatedResponseError(f"Groq response truncated at max_tokens={max_tokens or 900}")
             logger.info("[LLM] Groq response received, length=%d", len(result))
             logger.debug("[LLM] Groq preview: %s", result[:200])
             return result

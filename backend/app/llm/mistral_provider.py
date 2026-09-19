@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 from mistralai.client import Mistral
-from app.llm.base import BaseLLMProvider, QuotaExceededError, FatalProviderError
+from app.llm.base import BaseLLMProvider, QuotaExceededError, FatalProviderError, TruncatedResponseError
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -30,6 +30,10 @@ class MistralProvider(BaseLLMProvider):
             result = response.choices[0].message.content
             if not result:
                 raise ValueError("Mistral returned empty content")
+            # Detect truncation
+            if getattr(response.choices[0], 'finish_reason', None) == "length":
+                logger.warning("[LLM] Mistral response truncated (finish_reason=length), len=%d", len(result))
+                raise TruncatedResponseError(f"Mistral response truncated at max_tokens={max_tokens or 4096}")
             logger.info("[LLM] Mistral response received, length=%d", len(result))
             return result
         except Exception as e:

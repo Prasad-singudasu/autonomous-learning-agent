@@ -49,46 +49,79 @@ def _extract_balanced(text: str, open_char: str, close_char: str) -> str | None:
 def _try_repair(text: str) -> str | None:
     """
     Attempt to repair truncated JSON by closing unclosed braces/brackets.
+    Handles mid-string truncation by stripping the incomplete last element.
     Only used as a last resort — returns None if repair produces invalid JSON.
     """
-    # Count unclosed braces and brackets (outside strings)
-    depth_brace = 0
-    depth_bracket = 0
-    in_string = False
-    escape_next = False
+    def _count_depth(s: str):
+        depth_brace = depth_bracket = 0
+        in_string = escape_next = False
+        for ch in s:
+            if escape_next:
+                escape_next = False
+                continue
+            if ch == "\\" and in_string:
+                escape_next = True
+                continue
+            if ch == '"':
+                in_string = not in_string
+                continue
+            if in_string:
+                continue
+            if ch == '{': depth_brace += 1
+            elif ch == '}': depth_brace -= 1
+            elif ch == '[': depth_bracket += 1
+            elif ch == ']': depth_bracket -= 1
+        return depth_brace, depth_bracket, in_string
 
-    for ch in text:
-        if escape_next:
-            escape_next = False
-            continue
-        if ch == "\\" and in_string:
-            escape_next = True
-            continue
-        if ch == '"':
-            in_string = not in_string
-            continue
-        if in_string:
-            continue
-        if ch == '{':
-            depth_brace += 1
-        elif ch == '}':
-            depth_brace -= 1
-        elif ch == '[':
-            depth_bracket += 1
-        elif ch == ']':
-            depth_bracket -= 1
+    depth_brace, depth_bracket, in_string = _count_depth(text)
 
-    if depth_brace <= 0 and depth_bracket <= 0:
+    if depth_brace <= 0 and depth_bracket <= 0 and not in_string:
         return None  # Nothing to repair
 
-    # Truncate at last complete value — strip trailing partial string/key
-    # Remove trailing incomplete token (partial string, dangling comma, etc.)
-    repaired = re.sub(r',\s*$', '', text.rstrip())
-    repaired = re.sub(r',\s*"[^"]*$', '', repaired)  # dangling key with no value
+    candidate = text.rstrip()
 
-    # Close open brackets then braces
-    repaired += ']' * max(0, depth_bracket)
-    repaired += '}' * max(0, depth_brace)
+    # If we're mid-string, truncate back to the last complete JSON value boundary.
+    # Strategy: walk back to find the last ',' or '[' or '{' outside a string
+    # that precedes the incomplete token, then cut there.
+    if in_string or depth_brace > 0 or depth_bracket > 0:
+        # Find the last position that is a clean value boundary outside a string
+        last_safe = 0
+        in_str2 = esc2 = False
+        for i, ch in enumerate(candidate):
+            if esc2:
+                esc2 = False
+                continue
+            if ch == "\\" and in_str2:
+                esc2 = True
+                continue
+            if ch == '"':
+                in_str2 = not in_str2
+                continue
+            if in_str2:
+                continue
+            # Outside a string — record safe boundary after complete values
+            if ch in ('}', ']'):
+                last_safe = i + 1
+
+        if last_safe > 0:
+            candidate = candidate[:last_safe]
+
+    # Strip trailing dangling comma or incomplete key
+    candidate = re.sub(r',\s*$', '', candidate.rstrip())
+    candidate = re.sub(r',\s*"[^"]*$', '', candidate)
+
+    # Recount after trimming
+    depth_brace, depth_bracket, _ = _count_depth(candidate)
+
+    if depth_brace <= 0 and depth_bracket <= 0:
+        # May already be valid after trimming
+        try:
+            json.loads(candidate)
+            return candidate
+        except json.JSONDecodeError:
+            return None
+
+    repaired = candidate + ']' * max(0, depth_bracket) + '}' * max(0, depth_brace)
 
     try:
         json.loads(repaired)

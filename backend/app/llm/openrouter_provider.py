@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 import httpx
-from app.llm.base import BaseLLMProvider, QuotaExceededError, FatalProviderError
+from app.llm.base import BaseLLMProvider, QuotaExceededError, FatalProviderError, TruncatedResponseError
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -52,6 +52,10 @@ class OpenRouterProvider(BaseLLMProvider):
             result = data["choices"][0]["message"]["content"]
             if not result:
                 raise ValueError("OpenRouter returned empty content")
+            # Detect truncation
+            if data["choices"][0].get("finish_reason") == "length":
+                logger.warning("[LLM] OpenRouter response truncated (finish_reason=length), len=%d", len(result))
+                raise TruncatedResponseError(f"OpenRouter response truncated at max_tokens={max_tokens or 4096}")
             logger.info("[LLM] OpenRouter response received, length=%d", len(result))
             return result
         except (FatalProviderError, QuotaExceededError):

@@ -12,6 +12,11 @@ class FatalProviderError(Exception):
     pass
 
 
+class TruncatedResponseError(Exception):
+    """Raised when provider returns finish_reason=length — response was cut off. Try next provider."""
+    pass
+
+
 class BaseLLMProvider(ABC):
     @abstractmethod
     async def generate(self, prompt: str, system_prompt: Optional[str] = None, temperature: float = 0.7, max_tokens: Optional[int] = None) -> str:

@@ -2,7 +2,7 @@ import logging
 from typing import Optional
 from google import genai
 from google.genai import types
-from app.llm.base import BaseLLMProvider, QuotaExceededError, FatalProviderError
+from app.llm.base import BaseLLMProvider, QuotaExceededError, FatalProviderError, TruncatedResponseError
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -30,6 +30,11 @@ class GeminiProvider(BaseLLMProvider):
                     ),
                 )
             )
+            # Detect truncation
+            candidate = response.candidates[0] if response.candidates else None
+            if candidate and str(getattr(candidate, 'finish_reason', '')).upper() in ('MAX_TOKENS', '2'):
+                logger.warning("[LLM] Gemini response truncated (finish_reason=MAX_TOKENS)")
+                raise TruncatedResponseError("Gemini response truncated at max_output_tokens")
             return response.text
         except Exception as e:
             err = str(e)

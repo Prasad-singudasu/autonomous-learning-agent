@@ -1,7 +1,7 @@
 import logging
 from typing import Optional, List
 
-from app.llm.base import BaseLLMProvider, QuotaExceededError, FatalProviderError
+from app.llm.base import BaseLLMProvider, QuotaExceededError, FatalProviderError, TruncatedResponseError
 from app.llm.gemini_provider import GeminiProvider
 from app.llm.groq_provider import GroqProvider
 from app.llm.mistral_provider import MistralProvider
@@ -55,6 +55,9 @@ class LLMService:
                 result = await self._with_retry(provider, prompt, system_prompt, temperature, max_tokens)
                 logger.info("[LLM] %s succeeded", name)
                 return result
+            except TruncatedResponseError as e:
+                logger.warning("[LLM] %s truncated response — trying next provider", name)
+                last_error = e
             except QuotaExceededError as e:
                 logger.warning("[LLM] %s quota/rate-limit — trying next provider", name)
                 last_error = e
@@ -75,14 +78,13 @@ class LLMService:
         temperature: float,
         max_tokens: Optional[int] = None,
     ) -> str:
-        # Two attempts with a short pause for transient errors.
-        # QuotaExceededError and FatalProviderError skip retry immediately.
+        # QuotaExceededError, FatalProviderError, and TruncatedResponseError skip retry immediately.
         import asyncio
         last_exc: Optional[Exception] = None
         for attempt in range(2):
             try:
                 return await provider.generate(prompt, system_prompt, temperature, max_tokens)
-            except (QuotaExceededError, FatalProviderError):
+            except (QuotaExceededError, FatalProviderError, TruncatedResponseError):
                 raise
             except Exception as e:
                 last_exc = e
